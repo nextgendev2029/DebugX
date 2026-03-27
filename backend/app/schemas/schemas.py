@@ -69,10 +69,16 @@ class AIFeedbackOut(BaseModel):
         from_attributes = True
 
 
+class UserUpdate(BaseModel):
+    display_name: Optional[str] = Field(None, max_length=100)
+    username: Optional[str] = Field(None, max_length=50)
+    bio: Optional[str] = None
+
 class SubmissionOut(BaseModel):
     """Full submission result returned to the frontend."""
     id: int
     problem_id: int
+    problem_title: Optional[str] = None
     status: str
     code: str
     language: str

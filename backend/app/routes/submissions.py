@@ -166,6 +166,7 @@ def submit_code(
     return SubmissionOut(
         id=submission.id,
         problem_id=submission.problem_id,
+        problem_title=problem.title,
         status=submission.status.value,
         code=submission.code,
         language=submission.language,
@@ -178,3 +179,136 @@ def submit_code(
         feedback=feedback_data,
         created_at=submission.created_at,
     )
+
+
+@router.get("/heatmap", summary="Get User Heatmap")
+def get_user_heatmap(
+    decoded_token: dict = Depends(verify_firebase_token),
+    db: Session = Depends(get_db),
+):
+    """
+    Return per-day submission counts for the last 365 days + streak stats.
+    """
+    from datetime import date, timedelta
+    from collections import defaultdict
+    from app.models.models import User
+
+    uid = decoded_token.get("uid") or decoded_token.get("user_id")
+    user = db.query(User).filter(User.firebase_uid == uid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    today = date.today()
+    one_year_ago = today - timedelta(days=364)
+
+    # Get all user submissions in the last year
+    subs = (
+        db.query(Submission.created_at)
+        .filter(
+            Submission.user_id == user.id,
+            Submission.created_at >= datetime.combine(one_year_ago, datetime.min.time())
+        )
+        .all()
+    )
+
+    activity = defaultdict(int)
+    for (created_at,) in subs:
+        day_key = created_at.date().isoformat()
+        activity[day_key] += 1
+
+    # Current streak calculation (backwards from today)
+    current_streak = 0
+    check_day = today
+    
+    # If no activity today, check yesterday for streak continuity
+    if today.isoformat() not in activity:
+        check_day = today - timedelta(days=1)
+        
+    while check_day.isoformat() in activity:
+        current_streak += 1
+        check_day -= timedelta(days=1)
+
+    # Longest streak in the window
+    longest_streak, run = 0, 0
+    for i in range(364, -1, -1):
+        d = (today - timedelta(days=i)).isoformat()
+        if d in activity:
+            run += 1
+            longest_streak = max(longest_streak, run)
+        else:
+            run = 0
+
+    return {
+        "activity": dict(activity),
+        "current_streak": current_streak,
+        "longest_streak": longest_streak,
+        "total_submissions": sum(activity.values()),
+        "active_days": len(activity),
+        "today": today.isoformat(),
+    }
+
+
+@router.get("/stats", summary="Get User Stats")
+def get_user_stats(
+    decoded_token: dict = Depends(verify_firebase_token),
+    db: Session = Depends(get_db),
+):
+    """
+    Return total solved, success rate, current streak, and total points.
+    """
+    from app.models.models import User, Submission
+    uid = decoded_token.get("uid") or decoded_token.get("user_id")
+    user = db.query(User).filter(User.firebase_uid == uid).first()
+    if not user:
+        return {
+            "total_solved": 0,
+            "success_rate": 0,
+            "current_streak": 0,
+            "total_score": 0,
+        }
+
+    # Success rate calculation
+    total_attempts = db.query(Submission).filter(Submission.user_id == user.id).count()
+    total_solved = user.problems_solved or 0
+    success_rate = int((total_solved / total_attempts * 100)) if total_attempts > 0 else 0
+
+    return {
+        "total_solved": total_solved,
+        "success_rate": success_rate,
+        "current_streak": user.current_streak or 0,
+        "total_score": user.total_score or 0,
+    }
+
+@router.get("/mine", summary="Get Current User's Submissions")
+def get_my_submissions(
+    decoded_token: dict = Depends(verify_firebase_token),
+    db: Session = Depends(get_db),
+):
+    """
+    Return all submissions for the currently authenticated user.
+    """
+    from app.models.models import User
+    uid = decoded_token.get("uid") or decoded_token.get("user_id")
+    user = db.query(User).filter(User.firebase_uid == uid).first()
+    if not user:
+        return []
+    
+    subs = db.query(Submission).filter(Submission.user_id == user.id).order_by(Submission.created_at.desc()).all()
+    
+    # We can reuse the schema conversion logic if needed, but for simplicity returning dicts
+    return [
+        {
+            "id": s.id,
+            "problem_id": s.problem_id,
+            "problem_title": s.problem.title,
+            "status": s.status.value if hasattr(s.status, 'value') else s.status,
+            "code": s.code,
+            "language": s.language,
+            "passed_tests": s.passed_tests,
+            "total_tests": s.total_tests,
+            "score": s.score,
+            "execution_time": s.execution_time,
+            "created_at": s.created_at.isoformat(),
+        }
+        for s in subs
+    ]

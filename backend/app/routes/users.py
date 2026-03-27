@@ -11,6 +11,7 @@ from google.auth.transport import requests as google_requests
 from app.utils.database import get_db
 from app.utils.config import settings
 from app.models.models import User, UserRole
+from app.schemas.schemas import UserUpdate
 
 router = APIRouter()
 
@@ -141,6 +142,36 @@ def get_user_activity(
 
     activity = {str(row.date): row.count for row in results}
     return {"activity": activity}
+
+
+@router.patch("/update", summary="Update User Profile")
+def update_user(
+    update_data: UserUpdate,
+    decoded_token: dict = Depends(verify_firebase_token),
+    db: Session = Depends(get_db),
+):
+    """Update the current user's profile information."""
+    uid = decoded_token.get("uid") or decoded_token.get("user_id")
+    user = db.query(User).filter(User.firebase_uid == uid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if update_data.username:
+        # Check if username is already taken by another user
+        existing = db.query(User).filter(User.username == update_data.username).first()
+        if existing and existing.id != user.id:
+            raise HTTPException(status_code=400, detail="Username already taken")
+        user.username = update_data.username
+
+    if update_data.display_name is not None:
+        user.display_name = update_data.display_name
+    
+    if update_data.bio is not None:
+        user.bio = update_data.bio
+
+    db.commit()
+    db.refresh(user)
+    return _user_response(user)
 
 
 # ─── Helper ───────────────────────────────────────────────────────────────────

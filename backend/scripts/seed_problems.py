@@ -186,6 +186,123 @@ PROBLEMS = [
             {"input": "HELLO", "expected": "2"},
         ],
     },
+    {
+        "title": "Find Factorial",
+        "slug": "find-factorial",
+        "description": (
+            "Given a non-negative integer n, find its factorial. Factorial of n (n!) is the product of all positive integers less than or equal to n.\n\n"
+            "Input:\n"
+            "- A single integer n\n\n"
+            "Output:\n"
+            "- The factorial of n"
+        ),
+        "difficulty": DifficultyLevel.MEDIUM,
+        "topic": "Math",
+        "tags": ["math", "recursion", "loops"],
+        "examples": [
+            {"input": "5", "output": "120", "explanation": "5! = 5 * 4 * 3 * 2 * 1 = 120"},
+            {"input": "0", "output": "1", "explanation": "0! is defined as 1"},
+        ],
+        "constraints": ["0 ≤ n ≤ 20"],
+        "starter_code": {
+            "python": "n = int(input())\n\n# Calculate and print the factorial of n\n"
+        },
+        "test_cases": [
+            {"input": "5", "expected": "120"},
+            {"input": "0", "expected": "1"},
+            {"input": "1", "expected": "1"},
+            {"input": "3", "expected": "6"},
+            {"input": "10", "expected": "3628800"},
+        ],
+    },
+    {
+        "title": "Fibonacci Series",
+        "slug": "fibonacci-series",
+        "description": (
+            "The Fibonacci series is a sequence where each number is the sum of the two preceding ones, starting from 0 and 1.\n"
+            "Given a number n, print the first n terms of the Fibonacci series.\n\n"
+            "Input:\n"
+            "- A single integer n\n\n"
+            "Output:\n"
+            "- First n terms of the series, each on a new line"
+        ),
+        "difficulty": DifficultyLevel.MEDIUM,
+        "topic": "Loops",
+        "tags": ["loops", "sequence", "basics"],
+        "examples": [
+            {"input": "5", "output": "0\n1\n1\n2\n3"},
+            {"input": "1", "output": "0"},
+        ],
+        "constraints": ["1 ≤ n ≤ 30"],
+        "starter_code": {
+            "python": "n = int(input())\n\n# Print the first n terms of the Fibonacci series\n"
+        },
+        "test_cases": [
+            {"input": "5", "expected": "0\n1\n1\n2\n3"},
+            {"input": "1", "expected": "0"},
+            {"input": "2", "expected": "0\n1"},
+            {"input": "10", "expected": "0\n1\n1\n2\n3\n5\n8\n13\n21\n34"},
+        ],
+    },
+    {
+        "title": "Check Palindrome",
+        "slug": "check-palindrome",
+        "description": (
+            "A palindrome is a string that reads the same forwards and backwards (ignoring case).\n"
+            "Given a string, print \"True\" if it is a palindrome, else print \"False\".\n\n"
+            "Input:\n"
+            "- A single line string\n\n"
+            "Output:\n"
+            "- \"True\" or \"False\""
+        ),
+        "difficulty": DifficultyLevel.MEDIUM,
+        "topic": "Strings",
+        "tags": ["strings", "conditionals"],
+        "examples": [
+            {"input": "madam", "output": "True"},
+            {"input": "hello", "output": "False"},
+        ],
+        "constraints": ["1 ≤ length ≤ 100"],
+        "starter_code": {
+            "python": "s = input()\n\n# Print \"True\" if s is a palindrome, else \"False\"\n"
+        },
+        "test_cases": [
+            {"input": "madam", "expected": "True"},
+            {"input": "hello", "expected": "False"},
+            {"input": "Racecar", "expected": "True"},
+            {"input": "121", "expected": "True"},
+            {"input": "step on no pets", "expected": "True"},
+        ],
+    },
+    {
+        "title": "Prime Factors",
+        "slug": "prime-factors",
+        "description": (
+            "Given a number n, find all its prime factors and print them in ascending order, each on a new line.\n\n"
+            "Input:\n"
+            "- A single integer n\n\n"
+            "Output:\n"
+            "- Prime factors in ascending order, each on a new line"
+        ),
+        "difficulty": DifficultyLevel.HARD,
+        "topic": "Math",
+        "tags": ["math", "algorithms", "prime-numbers"],
+        "examples": [
+            {"input": "12", "output": "2\n2\n3", "explanation": "2 * 2 * 3 = 12"},
+            {"input": "7", "output": "7", "explanation": "7 is prime"},
+        ],
+        "constraints": ["2 ≤ n ≤ 10000"],
+        "starter_code": {
+            "python": "n = int(input())\n\n# Print the prime factors of n in ascending order\n"
+        },
+        "test_cases": [
+            {"input": "12", "expected": "2\n2\n3"},
+            {"input": "7", "expected": "7"},
+            {"input": "100", "expected": "2\n2\n5\n5"},
+            {"input": "30", "expected": "2\n3\n5"},
+            {"input": "99", "expected": "3\n3\n11"},
+        ],
+    },
 ]
 
 

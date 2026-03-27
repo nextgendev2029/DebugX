@@ -50,6 +50,7 @@ export interface ProblemListItem {
     success_rate: number;
     total_attempts: number;
     total_solved: number;
+    description?: string;
 }
 
 export interface ProblemDetail {
@@ -105,6 +106,7 @@ export interface AIFeedback {
 export interface SubmissionResult {
     id: number;
     problem_id: number;
+    problem_title: string;
     status: string;
     code: string;
     language: string;
@@ -132,4 +134,33 @@ export async function submitCode(
             language,
         }),
     });
+}
+
+/** Fetch user-specific stats */
+export async function fetchUserStats(): Promise<{
+    total_solved: number;
+    success_rate: number;
+    current_streak: number;
+    total_score: number;
+}> {
+    return apiFetch(`/api/submissions/stats`);
+}
+
+/** Fetch user-specific heatmap data */
+export interface HeatmapData {
+    activity: Record<string, number>;
+    current_streak: number;
+    longest_streak: number;
+    total_submissions: number;
+    active_days: number;
+    today: string;
+}
+
+export async function fetchUserHeatmap(): Promise<HeatmapData> {
+    return apiFetch(`/api/submissions/heatmap`);
+}
+
+/** Fetch all submissions for the current user */
+export async function fetchUserSubmissions(): Promise<SubmissionResult[]> {
+    return apiFetch(`/api/submissions/mine`);
 }

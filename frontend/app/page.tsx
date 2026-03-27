@@ -77,38 +77,6 @@ export default function HomePage() {
 
     return (
         <div className="min-h-screen bg-white dark:bg-neutral-950 font-sans">
-            {/* Header */}
-            <header className="border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 sticky top-0 z-50">
-                <nav className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-                    <div className="flex items-center space-x-2 flex-shrink-0">
-                        <span className="text-lg font-bold text-neutral-900 dark:text-white tracking-tight">Codexa</span>
-                    </div>
-                    {/* Desktop nav */}
-                    <div className="hidden sm:flex items-center space-x-3">
-                        <ThemeToggle />
-                        <Link href="/login" className="text-sm font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">Log In</Link>
-                        <Link href="/signup" className="text-sm font-medium bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 px-4 py-2 rounded-md hover:bg-neutral-700 dark:hover:bg-neutral-200 transition-colors">Sign Up</Link>
-                    </div>
-                    {/* Mobile nav */}
-                    <div className="flex sm:hidden items-center gap-2">
-                        <ThemeToggle />
-                        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 rounded-md text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                {mobileMenuOpen
-                                    ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />}
-                            </svg>
-                        </button>
-                    </div>
-                </nav>
-                {mobileMenuOpen && (
-                    <div className="sm:hidden border-t border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-4 space-y-2">
-                        <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="block w-full text-center py-2.5 text-sm font-medium border border-neutral-200 dark:border-neutral-700 rounded-lg text-neutral-700 dark:text-neutral-300">Log In</Link>
-                        <Link href="/signup" onClick={() => setMobileMenuOpen(false)} className="block w-full text-center py-2.5 text-sm font-medium bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-lg">Sign Up</Link>
-                    </div>
-                )}
-            </header>
-
             {/* Hero */}
             <section className="max-w-3xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-16 sm:pb-20 text-center">
                 <p className="font-mono text-xs tracking-widest uppercase text-neutral-400 dark:text-neutral-500 mb-5">

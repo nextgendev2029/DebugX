@@ -26,6 +26,8 @@ interface DBUser {
     total_score: number;
     problems_solved: number;
     current_streak: number;
+    bio?: string;
+    created_at?: string;
 }
 
 interface AuthContextType {
@@ -36,6 +38,7 @@ interface AuthContextType {
     signUpWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
     signInWithGoogle: () => Promise<void>;
     signOut: () => Promise<void>;
+    syncUserWithBackend: () => Promise<void>;
 }
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -59,6 +62,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return await res.json();
         } catch {
             return null;
+        }
+    };
+
+    const syncUserWithBackend = async () => {
+        if (user) {
+            const profile = await syncWithBackend(user);
+            setDbUser(profile);
         }
     };
 
@@ -101,7 +111,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, dbUser, loading, signInWithEmail, signUpWithEmail, signInWithGoogle, signOut }}>
+        <AuthContext.Provider value={{ 
+            user, 
+            dbUser, 
+            loading, 
+            signInWithEmail, 
+            signUpWithEmail, 
+            signInWithGoogle, 
+            signOut,
+            syncUserWithBackend
+        }}>
             {children}
         </AuthContext.Provider>
     );

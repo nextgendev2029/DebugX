@@ -2,17 +2,19 @@
 
 > A **LeetCode-style coding practice platform** with an **AI Code Visualizer** — built as part of OJT 2026.
 
-Codexa lets users practice coding problems, submit solutions, track their progress, follow structured learning tracks, and visualize how their code runs step-by-step using an AI-powered tracer. Authentication is handled by Firebase; data is stored in SQLite via SQLAlchemy ORM; the frontend runs on Next.js 14.
+Codexa allows users to solve coding problems, submit solutions, track their progress, follow structured learning tracks, and visualize code execution step-by-step using an AI-powered tracer. Authentication is managed via Firebase; data is stored in SQLite using the SQLAlchemy ORM; and the frontend is built with Next.js 14.
 
 ---
 
-## 🤝 Getting Started — For Teammates (Clone & Run)
+## 🤝 Getting Started — For Contributors
 
-> Hey teammate! If you've been added as a collaborator on this repo, follow these steps exactly to get the project running on your machine. Read carefully — ek step miss hua toh server nahi chalega 😄
+Follow these steps to set up the project on your local machine. Please follow the instructions carefully to ensure a smooth environment setup.
 
 ---
 
-### 📋 Prerequisites (Pehle yeh install karo)
+### 📋 Prerequisites
+
+Ensure you have the following installed before proceeding:
 
 Make sure you have these installed before starting:
 
@@ -28,8 +30,8 @@ Make sure you have these installed before starting:
 ### Step 1 — Clone the Repo
 
 ```bash
-git clone https://github.com/nextgendev2029/ojt-step-by-step.git
-cd ojt-step-by-step
+git clone https://github.com/abhiraj75/OJT-2026-MainRepo.git
+cd OJT-2026-MainRepo
 ```
 
 ---
@@ -55,16 +57,16 @@ pip install -r requirements.txt
 
 #### 2a — Create your `.env` file
 
-The `.env` file has secret keys — it's not in git. You need to create it manually:
+The `.env` file contains sensitive security keys and is not tracked by Git. Create it manually:
 
 ```bash
 # Copy the example template
 cp .env.example .env
 ```
 
-Now open `backend/.env` and fill in the values. Ask the project owner for:
-- `FIREBASE_PROJECT_ID` → Firebase console pe project ID
-- `GEMINI_API_KEY` → Google AI Studio se milega
+Open `backend/.env` and fill in the required values:
+- `FIREBASE_PROJECT_ID`: Available in the Firebase Console Project Settings.
+- `GEMINI_API_KEY`: Obtain this from Google AI Studio.
 
 ```env
 DATABASE_URL=sqlite:///./codexa.db
@@ -74,7 +76,7 @@ CORS_ORIGINS=["http://localhost:3000"]
 SECRET_KEY=any-random-string-here
 ```
 
-> ✅ `DATABASE_URL` waise bhi theek hai — SQLite file automatically ban jaati hai first run pe.
+> ✅ The `DATABASE_URL` is pre-configured for SQLite; the database file will be created automatically on the first run.
 
 #### 2b — Start the Backend Server
 
@@ -157,13 +159,13 @@ You should see:
 
 | Problem | Fix |
 |---|---|
-| `ModuleNotFoundError` in backend | Virtual environment activate karo: `source venv/bin/activate` |
-| `pip: command not found` | `pip3 install -r requirements.txt` try karo |
-| `npm install` fails | Node version check karo: `node -v` → must be 18+ |
-| Firebase auth not working | `.env.local` mein Firebase credentials check karo |
-| Backend CORS error | `.env` mein `CORS_ORIGINS=["http://localhost:3000"]` confirm karo |
-| Port 8000 already in use | `lsof -ti:8000 \| xargs kill` (Mac/Linux) |
-| Port 3000 already in use | `npm run dev -- -p 3001` to use port 3001 instead |
+| `ModuleNotFoundError` in backend | Activate the virtual environment: `source venv/bin/activate` |
+| `pip: command not found` | Try using `pip3 install -r requirements.txt` |
+| `npm install` fails | Check Node version: `node -v` (must be 18+) |
+| Firebase auth not working | Verify Firebase credentials in `.env.local` |
+| Backend CORS error | Confirm `CORS_ORIGINS=["http://localhost:3000"]` in `.env` |
+| Port 8000 already in use | Run `lsof -ti:8000 \| xargs kill` (Mac/Linux) |
+| Port 3000 already in use | Run `npm run dev -- -p 3001` to use an alternative port |
 
 ---
 
@@ -219,12 +221,12 @@ OJT 2026/
 │       │
 │       ├── routes/
 │       │   ├── __init__.py
-│       │   ├── users.py        → ✅ User auth sync, fetch by ID/Firebase UID
-│       │   ├── problems.py     → 🔴 Problems CRUD (empty stub — to be built)
-│       │   ├── submissions.py  → 🔴 Code submission & judging (empty stub)
-│       │   ├── learning.py     → 🔴 Learning tracks & modules (empty stub)
-│       │   ├── bookmarks.py    → 🔴 Bookmark management (empty stub)
-│       │   └── visualize.py    → 🔴 AI Code Visualizer API (empty stub)
+│       │   ├── users.py        → ✅ User auth sync, profile updates, and stats
+│       │   ├── problems.py     → ✅ Problem listing and detail retrieval
+│       │   ├── submissions.py  → ✅ Code execution, judging, and heatmap logic
+│       │   ├── learning.py     → 🔴 Learning tracks & modules (stub)
+│       │   ├── bookmarks.py    → 🔴 Bookmark management (stub)
+│       │   └── visualize.py    → 🔴 AI Code Visualizer API (stub)
 │       │
 │       └── utils/
 │           ├── __init__.py
@@ -242,26 +244,15 @@ OJT 2026/
     ├── postcss.config.js       → PostCSS (required by Tailwind)
     │
     ├── app/                    → Next.js App Router — each folder = a route
-    │   ├── layout.tsx          → Root layout — wraps every page with AuthProvider
-    │   ├── page.tsx            → Root page (/) — smart redirect to /dashboard or /login
-    │   ├── globals.css         → Global styles, Tailwind imports
-    │   ├── login/
-    │   │   └── page.tsx        → ✅ Sign In / Sign Up page with Google + email auth
-    │   ├── dashboard/
-    │   │   └── page.tsx        → ✅ Protected dashboard with user stats and welcome card
-    │   ├── problems/
-    │   │   ├── page.tsx        → 🔴 Problems list page (placeholder)
-    │   │   └── [id]/page.tsx   → 🔴 Individual problem + Monaco editor (placeholder)
-    │   ├── learning/
-    │   │   ├── page.tsx        → 🔴 Learning tracks listing (placeholder)
-    │   │   ├── [id]/page.tsx   → 🔴 Single track detail (placeholder)
-    │   │   └── [id]/[moduleId]/page.tsx → 🔴 Module content/lessons (placeholder)
-    │   ├── bookmarks/
-    │   │   └── page.tsx        → 🔴 Bookmarked problems (placeholder)
-    │   ├── profile/
-    │   │   └── page.tsx        → 🔴 User profile page (placeholder)
-    │   └── visualizer/
-    │       └── page.tsx        → 🔴 AI Code Visualizer (placeholder)
+    │   ├── layout.tsx          → Root layout with Auth & Theme Providers
+    │   ├── page.tsx            → Root page with redirect logic
+    │   ├── login/              → ✅ Sign In / Sign Up with Firebase
+    │   ├── dashboard/          → ✅ Interactive dashboard with heatmap & stats
+    │   ├── problems/           → ✅ Problems list and Monaco-based editor
+    │   ├── learning/           → 🔴 Learning tracks listing (placeholder)
+    │   ├── bookmarks/          → 🔴 Bookmarked problems (placeholder)
+    │   ├── profile/            → ✅ Multi-tab user profile settings
+    │   └── visualizer/         → 🔴 AI Code Visualizer (placeholder)
     │
     ├── components/
     │   ├── layout/
@@ -516,24 +507,24 @@ Frontend will be live at: **http://localhost:3000**
 | All 10 ORM models defined | ✅ Done |
 | Firebase Auth (email + Google) | ✅ Done |
 | User sync API (`POST /api/users/sync`) | ✅ Done |
-| Fetch user APIs (`GET /me/:uid`, `GET /:id`) | ✅ Done |
-| Login / Signup page (combined UI) | ✅ Done |
-| Dashboard page (protected) | ✅ Done |
-| Auth state persistence (auto-login) | ✅ Done |
+| User profile update (`PATCH /api/users/update`) | ✅ Done |
+| Problems API + listing page | ✅ Done |
+| Code submission + judging | ✅ Done |
+| User Activity Heatmap | ✅ Done |
+| User stats and streaks | ✅ Done |
+| Multi-tab Profile management | ✅ Done |
+| Dashboard page (modernized) | ✅ Done |
+| Auth state persistence | ✅ Done |
 | Protected routes | ✅ Done |
-| `.gitignore` + `.env.example` files | ✅ Done |
-| Problems API + listing page | 🔴 Not started |
-| Code submission + judging | 🔴 Not started |
-| Learning tracks + modules | 🔴 Not started |
-| Bookmarks | 🔴 Not started |
-| AI Code Visualizer | 🔴 Not started |
-| User profile page | 🔴 Not started |
+| Learning tracks + modules | 🔴 Planned |
+| Bookmarks | 🔴 Planned |
+| AI Code Visualizer | 🔴 Planned |
 
 ---
 
 ## 👨‍💻 Developer
 
-**Name:** nextgendev2029
-**Email:** tuhinrock121@gmail.com
+**Name:** nextgendev2029 ,abhiraj75
+**Email:** tuhinrock121@gmail.com ,itsabhiraj27@gmail.com
 **Project:** OJT 2026 — Codexa
 **Firebase Project:** `codexa-51a75`
