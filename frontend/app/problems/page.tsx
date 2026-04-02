@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import Link from "next/link";
-import { fetchProblems, fetchUserSubmissions, ProblemListItem, SubmissionResult } from "@/lib/api";
+import { fetchProblems, fetchUserSubmissions, ProblemListItem, SubmissionResult, bookmarkApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { getLogger } from "@/lib/logger";
 
@@ -25,6 +25,8 @@ export default function ProblemsPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [problems, setProblems] = useState<(ProblemListItem & { userSolved: boolean, userAttempts: number, userSuccessRate: number })[]>([]);
     const [loading, setLoading] = useState(true);
+    const [bookmarkedIds, setBookmarkedIds] = useState<Set<number>>(new Set());
+    const [togglingId, setTogglingId] = useState<number | null>(null);
 
     useEffect(() => {
         const loadData = async () => {
@@ -36,6 +38,8 @@ export default function ProblemsPage() {
                 let subsData: SubmissionResult[] = [];
                 if (dbUser?.id) {
                     subsData = await fetchUserSubmissions();
+                    const ids = await bookmarkApi.getIds(dbUser.id);
+                    setBookmarkedIds(new Set(ids));
                 }
 
                 const enrichedProblems = probsData.map(p => {
@@ -57,6 +61,24 @@ export default function ProblemsPage() {
         };
         loadData();
     }, [dbUser?.id]);
+
+    const handleBookmark = async (problemId: number, e: React.MouseEvent) => {
+        e.preventDefault(); // Prevent triggering any row click if we had one
+        if (!dbUser?.id || togglingId === problemId) return;
+        setTogglingId(problemId);
+        try {
+            const { bookmarked } = await bookmarkApi.toggle(dbUser.id, problemId);
+            setBookmarkedIds(prev => {
+                const next = new Set(prev);
+                bookmarked ? next.add(problemId) : next.delete(problemId);
+                return next;
+            });
+        } catch (err) {
+            logger.error("Failed to toggle bookmark", err);
+        } finally {
+            setTogglingId(null);
+        }
+    };
 
     const filteredProblems = problems.filter(problem => {
         const matchesTopic = selectedTopic === "All" || problem.topic === selectedTopic;
@@ -173,7 +195,25 @@ export default function ProblemsPage() {
                                                         </svg>
                                                     </div>
                                                 )}
-                                                <h3 className="text-base font-bold text-neutral-900 dark:text-white truncate tracking-tight">{problem.title}</h3>
+                                                <h3 className="text-base font-bold text-neutral-900 dark:text-white truncate tracking-tight flex items-center gap-2">
+                                                    {problem.title}
+                                                    {dbUser && (
+                                                        <button 
+                                                            onClick={(e) => handleBookmark(problem.id, e)}
+                                                            className={`p-1 rounded-md transition-colors ${
+                                                                bookmarkedIds.has(problem.id) 
+                                                                    ? "text-yellow-500 hover:text-yellow-600 bg-yellow-50 dark:bg-yellow-500/10" 
+                                                                    : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                                            } ${togglingId === problem.id ? "opacity-50 cursor-not-allowed" : ""}`}
+                                                            disabled={togglingId === problem.id}
+                                                            title={bookmarkedIds.has(problem.id) ? "Remove Bookmark" : "Add Bookmark"}
+                                                        >
+                                                            <svg className="w-4 h-4" fill={bookmarkedIds.has(problem.id) ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </h3>
                                                 <span className={`text-[10px] px-2 py-0.5 rounded border font-bold uppercase tracking-widest ${difficultyColors[problem.difficulty.toLowerCase()] || "text-neutral-600 bg-neutral-50 border-neutral-200"}`}>
                                                     {problem.difficulty}
                                                 </span>

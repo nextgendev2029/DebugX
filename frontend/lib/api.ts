@@ -197,3 +197,39 @@ export async function visualizeCode(code: string, stdin: string = ""): Promise<T
         body: JSON.stringify({ code, stdin }),
     });
 }
+
+// ─── Bookmarks API ───────────────────────────────────────────────────────────
+
+export interface Bookmark {
+    id: number;
+    user_id: number;
+    problem_id: number;
+    created_at: string;
+    problem_title: string;
+    problem_slug: string;
+    problem_difficulty: string;
+    problem_topic: string;
+    problem_description: string;
+}
+
+export const bookmarkApi = {
+    /** Toggle bookmark — add if not bookmarked, remove if already bookmarked */
+    toggle: async (userId: number, problemId: number): Promise<{ bookmarked: boolean; bookmark_id: number | null }> => {
+        return apiFetch(`/api/bookmarks/toggle`, {
+            method: "POST",
+            body: JSON.stringify({ user_id: userId, problem_id: problemId }),
+        });
+    },
+
+    /** Get all bookmarks with problem details for a user */
+    getAll: async (userId: number): Promise<Bookmark[]> => {
+        return apiFetch(`/api/bookmarks/user/${userId}`);
+    },
+
+    /** Get just the bookmarked problem IDs (fast, for highlighting icons) */
+    getIds: async (userId: number): Promise<number[]> => {
+        const data = await apiFetch(`/api/bookmarks/user/${userId}/ids`);
+        return data.bookmarked_problem_ids ?? [];
+    }
+};
+

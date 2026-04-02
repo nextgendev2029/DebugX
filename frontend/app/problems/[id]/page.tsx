@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import CodeEditor from "@/components/editor/CodeEditor";
-import { fetchProblem, submitCode, ProblemDetail, SubmissionResult } from "@/lib/api";
+import { fetchProblem, submitCode, ProblemDetail, SubmissionResult, bookmarkApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { getLogger } from "@/lib/logger";
 
@@ -25,6 +26,9 @@ export default function ProblemSolvePage() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { dbUser } = useAuth();
+    const [isBookmarked, setIsBookmarked] = useState<boolean>(false);
+    const [togglingBookmark, setTogglingBookmark] = useState(false);
 
     const [language, setLanguage] = useState<"python">("python");
     const [code, setCode] = useState("");
@@ -40,6 +44,10 @@ export default function ProblemSolvePage() {
                 logger.info("Problem loaded", { title: data.title, difficulty: data.difficulty });
                 if (data.starter_code?.python) {
                     setCode(data.starter_code.python);
+                }
+                if (dbUser?.id) {
+                    const ids = await bookmarkApi.getIds(dbUser.id);
+                    setIsBookmarked(ids.includes(data.id));
                 }
             } catch (err: any) {
                 logger.error("Failed to load problem", { slug, error: err.message });
@@ -78,10 +86,26 @@ export default function ProblemSolvePage() {
     };
 
     const handleVisualizeRedirect = () => {
+        logger.info("Redirecting to visualizer", { code_length: code.length });
         sessionStorage.setItem("visualizer_code", code);
         const defaultTest = problem?.examples?.[0]?.input || "";
         sessionStorage.setItem("visualizer_stdin", defaultTest);
         router.push("/visualizer");
+    };
+
+    const handleBookmark = async () => {
+        if (!dbUser?.id || !problem) return;
+        setTogglingBookmark(true);
+        logger.info("Toggling bookmark", { problemId: problem.id });
+        try {
+            const { bookmarked } = await bookmarkApi.toggle(dbUser.id, problem.id);
+            setIsBookmarked(bookmarked);
+            logger.info("Bookmark toggled successfully", { problemId: problem.id, bookmarked });
+        } catch (err) {
+            logger.error("Failed to toggle bookmark", err);
+        } finally {
+            setTogglingBookmark(false);
+        }
     };
 
     if (loading) {
@@ -137,13 +161,31 @@ export default function ProblemSolvePage() {
 
                             {/* Title & Badges */}
                             <div className="mb-8">
-                                <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-4 tracking-tight">{problem.title}</h1>
+                                <div className="flex items-center mb-4">
+                                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white tracking-tight">{problem.title}</h1>
+                                </div>
                                 <div className="flex items-center gap-3 text-xs">
                                     <span className={`capitalize font-bold px-2.5 py-1 rounded-md border ${DIFF_COLORS[problem.difficulty?.toLowerCase()]?.replace('text-', 'bg-').replace('-500', '-500/10 border-').replace('border-', 'border-') || "text-neutral-400 border-neutral-800"}`}>
                                         <span className={DIFF_COLORS[problem.difficulty?.toLowerCase()]}>{problem.difficulty}</span>
                                     </span>
                                     <span className="text-neutral-300 dark:text-neutral-700 font-light">|</span>
                                     <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-2.5 py-1 rounded-md font-medium border border-neutral-200 dark:border-neutral-700">{problem.topic}</span>
+                                    {dbUser && (
+                                        <button 
+                                            onClick={handleBookmark}
+                                            className={`p-1.5 rounded-md transition-colors ${
+                                                isBookmarked 
+                                                    ? "text-yellow-500 hover:text-yellow-600 bg-yellow-50 dark:bg-yellow-500/10" 
+                                                    : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                            } ${togglingBookmark ? "opacity-50 cursor-not-allowed" : ""}`}
+                                            disabled={togglingBookmark}
+                                            title={isBookmarked ? "Remove Bookmark" : "Add Bookmark"}
+                                        >
+                                            <svg className="w-4 h-4" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                            </svg>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
