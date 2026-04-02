@@ -26,7 +26,7 @@ export default function ProblemSolvePage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [language, setLanguage] = useState<"python" | "javascript">("python");
+    const [language, setLanguage] = useState<"python">("python");
     const [code, setCode] = useState("");
     const [result, setResult] = useState<SubmissionResult | null>(null);
     const [activeTab, setActiveTab] = useState<"console" | "tests" | "feedback">("console");
@@ -196,20 +196,7 @@ export default function ProblemSolvePage() {
                         {/* Editor Toolbar */}
                         <div className="bg-neutral-100 dark:bg-neutral-900 px-4 py-2.5 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
                             <div className="flex items-center gap-3">
-                                <select
-                                    value={language}
-                                    onChange={(e) => {
-                                        const newLang = e.target.value as "python" | "javascript";
-                                        setLanguage(newLang);
-                                        if (problem.starter_code?.[newLang]) {
-                                            setCode(problem.starter_code[newLang]);
-                                        }
-                                    }}
-                                    className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white px-3 py-1.5 rounded-md font-mono text-xs border border-neutral-200 dark:border-neutral-700 outline-none focus:border-neutral-400 dark:focus:border-neutral-500 cursor-pointer transition-colors shadow-sm"
-                                >
-                                    <option value="python">Python</option>
-                                    <option value="javascript">JavaScript</option>
-                                </select>
+                                <span className="text-xs font-mono font-bold text-neutral-600 dark:text-neutral-300 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 shadow-sm">Python</span>
                                 <button
                                     onClick={handleReset}
                                     className="text-[10px] uppercase tracking-widest font-bold text-neutral-500 hover:text-neutral-900 dark:hover:text-white font-sans transition-colors"
