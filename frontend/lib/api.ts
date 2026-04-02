@@ -171,3 +171,29 @@ export async function fetchUserHeatmap(): Promise<HeatmapData> {
 export async function fetchUserSubmissions(): Promise<SubmissionResult[]> {
     return apiFetch(`/api/submissions/mine`);
 }
+
+
+// ─── Visualizer API ──────────────────────────────────────────────────────────
+
+export interface TraceStep {
+    line: number;
+    variables: Record<string, unknown>;
+    output: string;
+}
+
+export interface TraceResult {
+    steps: TraceStep[];
+    final_output: string;
+    error: string | null;
+    total_steps: number;
+    truncated: boolean;
+    code_lines: string[];
+}
+
+/** Trace Python code execution step-by-step */
+export async function visualizeCode(code: string): Promise<TraceResult> {
+    return apiFetch("/api/visualize", {
+        method: "POST",
+        body: JSON.stringify({ code }),
+    });
+}

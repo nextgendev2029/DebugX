@@ -15,7 +15,7 @@ from app.utils.database import engine, Base
 import app.models.models  # noqa: F401
 
 # Import routers
-from app.routes import users, problems, submissions
+from app.routes import users, problems, submissions, visualize
 
 # Create all DB tables
 Base.metadata.create_all(bind=engine)
@@ -44,6 +44,8 @@ app.include_router(problems.router, prefix="/api/problems", tags=["problems"])
 logger.info("Registered router: /api/problems")
 app.include_router(submissions.router, prefix="/api/submissions", tags=["submissions"])
 logger.info("Registered router: /api/submissions")
+app.include_router(visualize.router, prefix="/api/visualize", tags=["visualize"])
+logger.info("Registered router: /api/visualize")
 
 logger.info("Codexa API ready — all routers registered")
 
