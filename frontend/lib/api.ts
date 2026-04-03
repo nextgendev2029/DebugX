@@ -2,7 +2,7 @@ import { auth } from "@/lib/firebase";
 import { getLogger } from "@/lib/logger";
 
 const logger = getLogger("API");
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://debugx-backend.onrender.com";
 
 /**
  * Get the current user's Firebase ID token for authenticated requests.

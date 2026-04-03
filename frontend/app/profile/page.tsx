@@ -11,7 +11,7 @@ const logger = getLogger("Profile");
 type Tab = "personal" | "account" | "danger";
 
 export default function ProfilePage() {
-    const { user, dbUser, syncUserWithBackend, logout } = useAuth();
+    const { user, dbUser, syncUserWithBackend, signOut } = useAuth();
     const [activeTab, setActiveTab] = useState<Tab>("personal");
     const [isEditing, setIsEditing] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +41,8 @@ export default function ProfilePage() {
         try {
             logger.info("Saving profile", { display_name: formData.display_name, username: formData.username });
             const idToken = await user?.getIdToken();
-            const response = await fetch("http://localhost:8000/api/users/update", {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://debugx-backend.onrender.com";
+            const response = await fetch(`${API_URL}/api/users/update`, {
                 method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
@@ -293,7 +294,7 @@ export default function ProfilePage() {
                                                 <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">End your current session on this device.</p>
                                             </div>
                                             <button
-                                                onClick={logout}
+                                                onClick={signOut}
                                                 className="bg-red-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-red-700 transition-all flex items-center justify-center space-x-2 shadow-sm shadow-red-500/10"
                                             >
                                                 <LogOut className="w-4 h-4" />
