@@ -8,16 +8,7 @@ import { getLogger } from "@/lib/logger";
 
 const logger = getLogger("Visualizer");
 
-const SAMPLE_CODE = `# Try stepping through this code!
-numbers = [1, 2, 3, 4, 5]
-total = 0
-
-for num in numbers:
-    total = total + num
-
-average = total / len(numbers)
-print(f"Sum: {total}")
-print(f"Average: {average}")`;
+const SAMPLE_CODE = "";
 
 const SPEED_OPTIONS = [
     { label: "0.5×", ms: 2000 },
@@ -28,6 +19,7 @@ const SPEED_OPTIONS = [
 
 export default function VisualizerPage() {
     const [code, setCode] = useState(SAMPLE_CODE);
+    const [stdin, setStdin] = useState("");
     const [trace, setTrace] = useState<TraceResult | null>(null);
     const [currentStep, setCurrentStep] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +31,22 @@ export default function VisualizerPage() {
     // Current step data
     const step: TraceStep | null = trace?.steps[currentStep] ?? null;
     const totalSteps = trace?.total_steps ?? 0;
+
+    // ── Pre-fill from Session Storage ─────────────────────────────────────────
+
+    useEffect(() => {
+        const storedCode = sessionStorage.getItem("visualizer_code");
+        const storedStdin = sessionStorage.getItem("visualizer_stdin");
+
+        if (storedCode !== null && storedCode !== undefined) {
+            setCode(storedCode);
+            sessionStorage.removeItem("visualizer_code");
+        }
+        if (storedStdin !== null && storedStdin !== undefined) {
+            setStdin(storedStdin);
+            sessionStorage.removeItem("visualizer_stdin");
+        }
+    }, []);
 
     // ── Playback Controls ─────────────────────────────────────────────────────
 
@@ -88,7 +96,7 @@ export default function VisualizerPage() {
 
         try {
             logger.info("Visualizing code", { length: code.length });
-            const result = await visualizeCode(code);
+            const result = await visualizeCode(code, stdin);
             setTrace(result);
 
             if (result.error) {
@@ -185,7 +193,7 @@ export default function VisualizerPage() {
                                     <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 font-bold">Python</span>
                                     <span className="w-px h-4 bg-neutral-200 dark:bg-neutral-700" />
                                     <button
-                                        onClick={() => { setCode(SAMPLE_CODE); setTrace(null); setCurrentStep(0); stopPlayback(); setError(null); }}
+                                        onClick={() => { setCode(SAMPLE_CODE); setStdin(""); setTrace(null); setCurrentStep(0); stopPlayback(); setError(null); }}
                                         className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors font-bold"
                                     >
                                         Reset
@@ -208,6 +216,19 @@ export default function VisualizerPage() {
                                     onChange={(val) => setCode(val)}
                                 />
                                 {/* Line highlight overlay — rendered via decorations in a real impl, but for now we indicate via the step panel */}
+                            </div>
+
+                            {/* Standard Input */}
+                            <div className="mt-4 flex flex-col">
+                                <label className="text-xs font-mono uppercase tracking-widest text-neutral-500 font-bold mb-2">
+                                    Standard Input (Test Cases)
+                                </label>
+                                <textarea
+                                    value={stdin}
+                                    onChange={(e) => setStdin(e.target.value)}
+                                    placeholder="Enter inputs here (one per line)..."
+                                    className="w-full h-24 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm font-mono text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all resize-none"
+                                />
                             </div>
 
                             {/* Current line indicator */}

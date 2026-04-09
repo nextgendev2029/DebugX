@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getLogger } from "@/lib/logger";
+import { Eye, EyeOff, Check, X } from "lucide-react";
 
 const logger = getLogger("Signup");
 
@@ -18,12 +19,28 @@ export default function SignupPage() {
     });
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     useEffect(() => {
         if (!authLoading && user) {
             router.replace("/dashboard");
         }
     }, [user, authLoading, router]);
+
+    const isLengthValid = formData.password.length >= 8;
+    const hasUppercase = /[A-Z]/.test(formData.password);
+    const hasLowercase = /[a-z]/.test(formData.password);
+    const hasNumber = /[0-9]/.test(formData.password);
+    const hasSpecial = /[^A-Za-z0-9]/.test(formData.password);
+
+    const passwordCriteria = [
+        { label: "Minimum 8 characters", met: isLengthValid },
+        { label: "At least 1 uppercase letter", met: hasUppercase },
+        { label: "At least 1 lowercase letter", met: hasLowercase },
+        { label: "At least 1 number", met: hasNumber },
+        { label: "At least 1 special character", met: hasSpecial },
+    ];
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -34,7 +51,12 @@ export default function SignupPage() {
         if (!formData.email.trim()) { setError("Email is required"); setLoading(false); return; }
         if (!formData.password) { setError("Password is required"); setLoading(false); return; }
         if (formData.password !== formData.confirmPassword) { setError("Passwords do not match"); setLoading(false); return; }
-        if (formData.password.length < 6) { setError("Password must be at least 6 characters"); setLoading(false); return; }
+        
+        if (!isLengthValid || !hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
+            setError("Please make sure all password criteria are met.");
+            setLoading(false);
+            return;
+        }
         
         try {
             logger.info("Email signup attempt", { email: formData.email, displayName: formData.username });
@@ -71,9 +93,6 @@ export default function SignupPage() {
         <div className="min-h-screen bg-white dark:bg-neutral-950 flex items-center justify-center px-6 py-12">
             <div className="max-w-sm w-full">
                 <div className="text-center mb-8">
-                    <Link href="/" className="inline-flex items-center gap-2 mb-5">
-                        <span className="text-2xl font-bold text-neutral-900 dark:text-white tracking-wide">DEBUGX</span>
-                    </Link>
                     <h1 className="text-xl font-bold text-neutral-900 dark:text-white mb-1">Create an account</h1>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">Start coding for free.</p>
                 </div>
@@ -86,24 +105,79 @@ export default function SignupPage() {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {[
-                            { label: "Full Name", type: "text", key: "username", placeholder: "Your name" },
-                            { label: "Email", type: "email", key: "email", placeholder: "you@example.com" },
-                            { label: "Password", type: "password", key: "password", placeholder: "At least 6 characters" },
-                            { label: "Confirm Password", type: "password", key: "confirmPassword", placeholder: "••••••••" },
-                        ].map(field => (
-                            <div key={field.key}>
-                                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">{field.label}</label>
+                        <div>
+                            <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Full Name</label>
+                            <input
+                                type="text"
+                                placeholder="Your name"
+                                className="w-full border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white bg-white dark:bg-neutral-800 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-500 placeholder-neutral-300 dark:placeholder-neutral-600 transition-colors"
+                                value={formData.username}
+                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Email</label>
+                            <input
+                                type="email"
+                                placeholder="you@example.com"
+                                className="w-full border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white bg-white dark:bg-neutral-800 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-500 placeholder-neutral-300 dark:placeholder-neutral-600 transition-colors"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Password</label>
+                            <div className="relative">
                                 <input
-                                    type={field.type}
-                                    placeholder={field.placeholder}
-                                    className="w-full border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white bg-white dark:bg-neutral-800 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-500 placeholder-neutral-300 dark:placeholder-neutral-600 transition-colors"
-                                    value={(formData as any)[field.key]}
-                                    onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="Enter secure password"
+                                    className="w-full border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white bg-white dark:bg-neutral-800 rounded-md px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-500 placeholder-neutral-300 dark:placeholder-neutral-600 transition-colors"
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     required
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+                                    tabIndex={-1}
+                                >
+                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
                             </div>
-                        ))}
+                            
+                            {/* Live Password Criteria */}
+                            {formData.password.length > 0 && (
+                                <div className="mt-3 space-y-1.5">
+                                    {passwordCriteria.map((criterion, idx) => (
+                                        <div key={idx} className="flex items-center gap-2 text-xs">
+                                            {criterion.met ? (
+                                                <Check size={14} className="text-green-500" />
+                                            ) : (
+                                                <X size={14} className="text-neutral-400 dark:text-neutral-600" />
+                                            )}
+                                            <span className={criterion.met ? "text-green-600 dark:text-green-400" : "text-neutral-500 dark:text-neutral-400"}>
+                                                {criterion.label}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Confirm Password</label>
+                            <input
+                                type="password"
+                                placeholder="••••••••"
+                                className="w-full border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white bg-white dark:bg-neutral-800 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:focus:ring-neutral-500 placeholder-neutral-300 dark:placeholder-neutral-600 transition-colors"
+                                value={formData.confirmPassword}
+                                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                onPaste={(e) => e.preventDefault()}
+                                required
+                            />
+                        </div>
 
                         <div className="flex items-start gap-2 pt-1">
                             <input

@@ -4,7 +4,7 @@ from typing import List
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = "sqlite:///./codexa.db"
+    DATABASE_URL: str = "sqlite:///./debugx.db"
 
     # Firebase
     FIREBASE_PROJECT_ID: str = ""

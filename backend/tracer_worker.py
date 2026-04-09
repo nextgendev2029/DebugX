@@ -44,7 +44,7 @@ def serialize_value(val):
     return r if len(r) <= 200 else r[:200] + "..."
 
 
-def trace_code(user_code: str) -> dict:
+def trace_code(user_code: str, user_stdin: str = "") -> dict:
     """
     Execute user code with sys.settrace and capture every line execution.
 
@@ -126,6 +126,20 @@ def trace_code(user_code: str) -> dict:
     sys.stdout = captured_output
 
     # Build a restricted global namespace
+
+    # Mock standard input
+    input_lines = user_stdin.splitlines()
+    input_iter = iter(input_lines)
+
+    def mocked_input(*args):
+        try:
+            val = next(input_iter)
+            # Log the input to captured output so it appears in the trace like a real terminal interaction (optional)
+            # captured_output.write(f"{val}\n") 
+            return val
+        except StopIteration:
+            return ""
+
     safe_globals = {"__builtins__": {
         "print": print,
         "range": range,
@@ -158,7 +172,7 @@ def trace_code(user_code: str) -> dict:
         "hex": hex,
         "bin": bin,
         "oct": oct,
-        "input": lambda *a: "",  # stub input() to return empty string
+        "input": mocked_input,
         "True": True,
         "False": False,
         "None": None,
@@ -190,8 +204,9 @@ if __name__ == "__main__":
         raw_input = sys.stdin.read()
         payload = json.loads(raw_input)
         user_code = payload.get("code", "")
+        user_stdin = payload.get("stdin", "")
 
-        result = trace_code(user_code)
+        result = trace_code(user_code, user_stdin)
         print(json.dumps(result))
     except Exception as e:
         print(json.dumps({

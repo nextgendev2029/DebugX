@@ -26,6 +26,7 @@ TRACER_SCRIPT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__f
 
 class VisualizeRequest(BaseModel):
     code: str
+    stdin: str = ""
 
 
 @router.post("", summary="Visualize Code Execution")
@@ -51,7 +52,7 @@ def visualize_code(
     try:
         result = subprocess.run(
             [sys.executable, TRACER_SCRIPT],
-            input=json.dumps({"code": code}),
+            input=json.dumps({"code": code, "stdin": body.stdin}),
             capture_output=True,
             text=True,
             timeout=settings.MAX_EXECUTION_TIME,

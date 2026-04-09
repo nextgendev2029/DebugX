@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import CodeEditor from "@/components/editor/CodeEditor";
-import { fetchProblem, submitCode, ProblemDetail, SubmissionResult } from "@/lib/api";
+import { fetchProblem, submitCode, ProblemDetail, SubmissionResult, bookmarkApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { getLogger } from "@/lib/logger";
 
@@ -25,11 +26,14 @@ export default function ProblemSolvePage() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { dbUser } = useAuth();
+    const [isBookmarked, setIsBookmarked] = useState<boolean>(false);
+    const [togglingBookmark, setTogglingBookmark] = useState(false);
 
     const [language, setLanguage] = useState<"python">("python");
     const [code, setCode] = useState("");
     const [result, setResult] = useState<SubmissionResult | null>(null);
-    const [activeTab, setActiveTab] = useState<"console" | "tests" | "feedback">("console");
+    const [activeTab, setActiveTab] = useState<"console" | "tests" | "feedback" | "visualizer">("console");
 
     useEffect(() => {
         const load = async () => {
@@ -40,6 +44,10 @@ export default function ProblemSolvePage() {
                 logger.info("Problem loaded", { title: data.title, difficulty: data.difficulty });
                 if (data.starter_code?.python) {
                     setCode(data.starter_code.python);
+                }
+                if (dbUser?.id) {
+                    const ids = await bookmarkApi.getIds(dbUser.id);
+                    setIsBookmarked(ids.includes(data.id));
                 }
             } catch (err: any) {
                 logger.error("Failed to load problem", { slug, error: err.message });
@@ -75,6 +83,29 @@ export default function ProblemSolvePage() {
         setResult(null);
         setError(null);
         setActiveTab("console");
+    };
+
+    const handleVisualizeRedirect = () => {
+        logger.info("Redirecting to visualizer", { code_length: code.length });
+        sessionStorage.setItem("visualizer_code", code);
+        const defaultTest = problem?.examples?.[0]?.input || "";
+        sessionStorage.setItem("visualizer_stdin", defaultTest);
+        router.push("/visualizer");
+    };
+
+    const handleBookmark = async () => {
+        if (!dbUser?.id || !problem) return;
+        setTogglingBookmark(true);
+        logger.info("Toggling bookmark", { problemId: problem.id });
+        try {
+            const { bookmarked } = await bookmarkApi.toggle(dbUser.id, problem.id);
+            setIsBookmarked(bookmarked);
+            logger.info("Bookmark toggled successfully", { problemId: problem.id, bookmarked });
+        } catch (err) {
+            logger.error("Failed to toggle bookmark", err);
+        } finally {
+            setTogglingBookmark(false);
+        }
     };
 
     if (loading) {
@@ -130,13 +161,31 @@ export default function ProblemSolvePage() {
 
                             {/* Title & Badges */}
                             <div className="mb-8">
-                                <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-4 tracking-tight">{problem.title}</h1>
+                                <div className="flex items-center mb-4">
+                                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white tracking-tight">{problem.title}</h1>
+                                </div>
                                 <div className="flex items-center gap-3 text-xs">
                                     <span className={`capitalize font-bold px-2.5 py-1 rounded-md border ${DIFF_COLORS[problem.difficulty?.toLowerCase()]?.replace('text-', 'bg-').replace('-500', '-500/10 border-').replace('border-', 'border-') || "text-neutral-400 border-neutral-800"}`}>
                                         <span className={DIFF_COLORS[problem.difficulty?.toLowerCase()]}>{problem.difficulty}</span>
                                     </span>
                                     <span className="text-neutral-300 dark:text-neutral-700 font-light">|</span>
                                     <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-2.5 py-1 rounded-md font-medium border border-neutral-200 dark:border-neutral-700">{problem.topic}</span>
+                                    {dbUser && (
+                                        <button 
+                                            onClick={handleBookmark}
+                                            className={`p-1.5 rounded-md transition-colors ${
+                                                isBookmarked 
+                                                    ? "text-yellow-500 hover:text-yellow-600 bg-yellow-50 dark:bg-yellow-500/10" 
+                                                    : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                            } ${togglingBookmark ? "opacity-50 cursor-not-allowed" : ""}`}
+                                            disabled={togglingBookmark}
+                                            title={isBookmarked ? "Remove Bookmark" : "Add Bookmark"}
+                                        >
+                                            <svg className="w-4 h-4" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                            </svg>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -232,7 +281,7 @@ export default function ProblemSolvePage() {
                                 <div className="bg-white dark:bg-neutral-950 flex flex-col h-full border-t border-neutral-200 dark:border-neutral-800">
                             {/* Tabs */}
                             <div className="flex border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50">
-                                {(["console", "tests", "feedback"] as const).map(tab => (
+                                {(["console", "tests", "feedback", "visualizer"] as const).map(tab => (
                                     <button
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
@@ -241,7 +290,7 @@ export default function ProblemSolvePage() {
                                             : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300"
                                             }`}
                                     >
-                                        {tab === "tests" ? "Test Cases" : tab === "feedback" ? "AI Feedback" : "Console"}
+                                        {tab === "tests" ? "Test Cases" : tab === "feedback" ? "AI Feedback" : tab === "visualizer" ? "Visualizer" : "Console"}
                                     </button>
                                 ))}
                             </div>
@@ -325,6 +374,30 @@ export default function ProblemSolvePage() {
                                         ) : (
                                             <p className="text-neutral-500 font-sans">No feedback generated for this submission.</p>
                                         )}
+                                    </div>
+                                )}
+
+                                {/* Visualizer */}
+                                {activeTab === "visualizer" && (
+                                    <div className="flex flex-col items-center justify-center h-full text-center space-y-4 pt-10 pb-10">
+                                        <div className="bg-neutral-100 dark:bg-neutral-800/50 p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 max-w-sm w-full mx-auto shadow-sm">
+                                            <div className="w-12 h-12 bg-neutral-200 dark:bg-neutral-800 rounded-xl flex items-center justify-center mx-auto mb-4 border border-neutral-300 dark:border-neutral-700">
+                                                <svg className="w-6 h-6 text-neutral-600 dark:text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            </div>
+                                            <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2 tracking-tight">Visualize Code</h3>
+                                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-6 font-sans leading-relaxed">
+                                                Step through your code execution line-by-line using the default test case inputs.
+                                            </p>
+                                            <button 
+                                                onClick={handleVisualizeRedirect}
+                                                className="w-full bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold px-4 py-3 rounded-xl text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md"
+                                            >
+                                                Visualize This Code
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
 

@@ -7,7 +7,7 @@ from app.utils.logger import setup_logging, get_logger
 setup_logging(level=settings.LOG_LEVEL)
 logger = get_logger(__name__)
 
-logger.info("Starting Codexa API (env=%s, log_level=%s)", settings.APP_ENV, settings.LOG_LEVEL)
+logger.info("Starting DebugX API (env=%s, log_level=%s)", settings.APP_ENV, settings.LOG_LEVEL)
 
 from app.utils.database import engine, Base
 
@@ -15,16 +15,16 @@ from app.utils.database import engine, Base
 import app.models.models  # noqa: F401
 
 # Import routers
-from app.routes import users, problems, submissions, visualize
+from app.routes import users, problems, submissions, visualize, bookmarks
 
 # Create all DB tables
 Base.metadata.create_all(bind=engine)
 logger.info("Database tables created/verified")
 
 app = FastAPI(
-    title="Codexa API",
+    title="DebugX API",
     version="1.0.0",
-    description="Backend API for the Codexa coding practice platform",
+    description="Backend API for the DebugX coding practice platform",
 )
 
 # CORS — allow frontend to talk to backend
@@ -46,14 +46,16 @@ app.include_router(submissions.router, prefix="/api/submissions", tags=["submiss
 logger.info("Registered router: /api/submissions")
 app.include_router(visualize.router, prefix="/api/visualize", tags=["visualize"])
 logger.info("Registered router: /api/visualize")
+app.include_router(bookmarks.router, prefix="/api/bookmarks", tags=["bookmarks"])
+logger.info("Registered router: /api/bookmarks")
 
-logger.info("Codexa API ready — all routers registered")
+logger.info("DebugX API ready — all routers registered")
 
 
 @app.get("/")
 def root():
     logger.debug("Root endpoint hit")
-    return {"status": "ok", "app": "Codexa API"}
+    return {"status": "ok", "app": "DebugX API"}
 
 
 @app.get("/health")

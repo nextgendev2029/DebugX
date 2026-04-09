@@ -1,5 +1,5 @@
 """
-Centralized logging configuration for the Codexa backend.
+Centralized logging configuration for the DebugX backend.
 
 Usage in any module:
     from app.utils.logger import get_logger
