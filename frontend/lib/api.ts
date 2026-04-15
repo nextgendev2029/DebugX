@@ -170,6 +170,30 @@ export async function runCode(
     });
 }
 
+/** Custom run result — raw stdout/stderr from user-provided input */
+export interface CustomRunResult {
+    stdout: string;
+    stderr: string;
+    error: string | null;
+    execution_time: number;
+}
+
+/** Run code with custom stdin input */
+export async function runCustomInput(
+    code: string,
+    stdin: string,
+    language: string = "python"
+): Promise<CustomRunResult> {
+    return apiFetch("/api/submissions/run-custom", {
+        method: "POST",
+        body: JSON.stringify({
+            code,
+            stdin,
+            language,
+        }),
+    });
+}
+
 /** Fetch user-specific stats */
 export async function fetchUserStats(): Promise<{
     total_solved: number;

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -13,6 +14,48 @@ from app.utils.encryption import decrypt_api_key
 
 router = APIRouter()
 logger = get_logger(__name__)
+
+
+# ─── POST /api/submissions/run-custom ────────────────────────────────────────
+
+class CustomRunBody(BaseModel):
+    code: str
+    stdin: str = ""
+    language: str = "python"
+
+@router.post("/run-custom", summary="Run Code with Custom Input")
+def run_custom_input(
+    body: CustomRunBody,
+    decoded_token: dict = Depends(verify_firebase_token),
+):
+    """
+    Run code with user-provided stdin. Returns raw stdout/stderr.
+    No test case comparison, no DB record, no AI feedback.
+    """
+    from app.utils.code_runner import _execute_python
+    from app.utils.config import settings
+
+    uid = decoded_token.get("uid") or decoded_token.get("user_id")
+    logger.info("Custom input run (uid=%s, language=%s)", uid, body.language)
+
+    if body.language != "python":
+        return {
+            "stdout": "",
+            "stderr": f"Language '{body.language}' is not supported yet.",
+            "error": f"Language '{body.language}' is not supported yet.",
+            "execution_time": 0,
+        }
+
+    result = _execute_python(body.code, body.stdin, settings.MAX_EXECUTION_TIME)
+
+    logger.info("Custom input run finished (uid=%s, time=%dms)", uid, result["time_ms"])
+
+    return {
+        "stdout": result["stdout"] or "",
+        "stderr": result["stderr"] or "",
+        "error": result["error"],
+        "execution_time": result["time_ms"],
+    }
 
 
 # ─── POST /api/submissions/run ───────────────────────────────────────────────

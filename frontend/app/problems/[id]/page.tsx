@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import CodeEditor from "@/components/editor/CodeEditor";
-import { fetchProblem, submitCode, runCode, ProblemDetail, SubmissionResult, RunResult, bookmarkApi } from "@/lib/api";
+import { fetchProblem, submitCode, runCode, runCustomInput, ProblemDetail, SubmissionResult, RunResult, CustomRunResult, bookmarkApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { getLogger } from "@/lib/logger";
@@ -35,7 +35,10 @@ export default function ProblemSolvePage() {
     const [code, setCode] = useState("");
     const [result, setResult] = useState<SubmissionResult | null>(null);
     const [runResult, setRunResult] = useState<RunResult | null>(null);
-    const [activeTab, setActiveTab] = useState<"console" | "tests" | "feedback" | "visualizer">("console");
+    const [customInput, setCustomInput] = useState("");
+    const [customOutput, setCustomOutput] = useState<CustomRunResult | null>(null);
+    const [runningCustom, setRunningCustom] = useState(false);
+    const [activeTab, setActiveTab] = useState<"console" | "tests" | "feedback" | "visualizer" | "custom">("console");
 
     useEffect(() => {
         const load = async () => {
@@ -102,10 +105,28 @@ export default function ProblemSolvePage() {
         }
     };
 
+    const handleCustomRun = async () => {
+        setRunningCustom(true);
+        setCustomOutput(null);
+        setError(null);
+        try {
+            logger.info("Running with custom input", { language });
+            const res = await runCustomInput(code, customInput, language);
+            logger.info("Custom run done", { time: res.execution_time });
+            setCustomOutput(res);
+        } catch (err: any) {
+            logger.error("Custom run failed", { error: err.message });
+            setError(err.message || "Custom run failed");
+        } finally {
+            setRunningCustom(false);
+        }
+    };
+
     const handleReset = () => {
         if (problem?.starter_code?.[language]) setCode(problem.starter_code[language]);
         setResult(null);
         setRunResult(null);
+        setCustomOutput(null);
         setError(null);
         setActiveTab("console");
     };
@@ -325,7 +346,7 @@ export default function ProblemSolvePage() {
                                 <div className="bg-white dark:bg-neutral-950 flex flex-col h-full border-t border-neutral-200 dark:border-neutral-800">
                             {/* Tabs */}
                             <div className="flex border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50">
-                                {(["console", "tests", "feedback", "visualizer"] as const).map(tab => (
+                                {(["console", "tests", "custom", "feedback", "visualizer"] as const).map(tab => (
                                     <button
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
@@ -334,7 +355,7 @@ export default function ProblemSolvePage() {
                                             : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300"
                                             }`}
                                     >
-                                        {tab === "tests" ? "Test Cases" : tab === "feedback" ? "AI Feedback" : tab === "visualizer" ? "Visualizer" : "Console"}
+                                        {tab === "tests" ? "Test Cases" : tab === "custom" ? "Custom Input" : tab === "feedback" ? "AI Feedback" : tab === "visualizer" ? "Visualizer" : "Console"}
                                     </button>
                                 ))}
                             </div>
@@ -457,12 +478,68 @@ export default function ProblemSolvePage() {
                                     </div>
                                 )}
 
+                                {/* Custom Input Tab */}
+                                {activeTab === "custom" && (
+                                    <div className="flex flex-col gap-3 h-full">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-[10px] font-mono uppercase tracking-[0.2em] font-bold text-neutral-500">Stdin Input</p>
+                                            <button
+                                                onClick={handleCustomRun}
+                                                disabled={runningCustom || submitting || running}
+                                                className="bg-emerald-600 text-white text-[10px] font-bold px-4 py-1.5 rounded-md hover:bg-emerald-500 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest flex items-center gap-1.5"
+                                            >
+                                                {runningCustom ? (
+                                                    <>
+                                                        <span className="w-3 h-3 border-2 border-emerald-300 border-t-white rounded-full animate-spin"></span>
+                                                        Running...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                                        Run
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                        <textarea
+                                            value={customInput}
+                                            onChange={(e) => setCustomInput(e.target.value)}
+                                            placeholder="Enter your input here...&#10;e.g.&#10;5&#10;1 2 3 4 5"
+                                            className="flex-1 min-h-[80px] bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-3 text-sm font-mono text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 dark:placeholder-neutral-600 resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                                        />
+                                        <div>
+                                            <p className="text-[10px] font-mono uppercase tracking-[0.2em] font-bold text-neutral-500 mb-2">Output</p>
+                                            <div className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-3 min-h-[60px]">
+                                                {customOutput ? (
+                                                    <>
+                                                        {customOutput.stdout && (
+                                                            <pre className="text-sm font-mono text-neutral-800 dark:text-green-400 whitespace-pre-wrap">{customOutput.stdout}</pre>
+                                                        )}
+                                                        {customOutput.stderr && (
+                                                            <pre className="text-sm font-mono text-red-500 whitespace-pre-wrap mt-1">{customOutput.stderr}</pre>
+                                                        )}
+                                                        {customOutput.error && !customOutput.stderr && (
+                                                            <pre className="text-sm font-mono text-red-500 whitespace-pre-wrap">{customOutput.error}</pre>
+                                                        )}
+                                                        {!customOutput.stdout && !customOutput.stderr && !customOutput.error && (
+                                                            <p className="text-neutral-400 text-sm font-mono italic">(no output)</p>
+                                                        )}
+                                                        <p className="text-[10px] text-neutral-500 mt-2 font-mono">Execution time: {customOutput.execution_time}ms</p>
+                                                    </>
+                                                ) : (
+                                                    <p className="text-neutral-400 text-sm font-mono">{">"}  Enter input above and click Run to see output.</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Empty states */}
                                 {activeTab === "tests" && !result && !runResult && (
-                                    <p className="text-neutral-500">{">"} Run or submit your code to see test results.</p>
+                                    <p className="text-neutral-500">{">"}  Run or submit your code to see test results.</p>
                                 )}
                                 {activeTab === "feedback" && !result && (
-                                    <p className="text-neutral-500">{">"} Submit your code to receive AI feedback.</p>
+                                    <p className="text-neutral-500">{">"}  Submit your code to receive AI feedback.</p>
                                 )}
                             </div>
                                 </div>
