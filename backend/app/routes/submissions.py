@@ -15,6 +15,70 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 
+# ─── POST /api/submissions/run ───────────────────────────────────────────────
+
+@router.post("/run", summary="Run Code (no submission)")
+def run_code(
+    body: SubmissionCreate,
+    decoded_token: dict = Depends(verify_firebase_token),
+    db: Session = Depends(get_db),
+):
+    """
+    Run code against test cases WITHOUT creating a submission.
+    No DB record, no AI feedback, no stats update.
+    """
+    from app.models.models import User
+    uid = decoded_token.get("uid") or decoded_token.get("user_id")
+    user = db.query(User).filter(User.firebase_uid == uid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found. Please sync your account first.")
+
+    problem = db.query(Problem).filter(Problem.id == body.problem_id).first()
+    if not problem:
+        raise HTTPException(status_code=404, detail="Problem not found")
+
+    logger.info(
+        "Run (no submit) received (user=%s, problem_id=%d, language=%s)",
+        user.username, problem.id, body.language,
+    )
+
+    test_cases = problem.test_cases or []
+    if not test_cases:
+        raise HTTPException(status_code=400, detail="This problem has no test cases configured")
+
+    run_result = run_code_against_tests(
+        user_code=body.code,
+        test_cases=test_cases,
+        language=body.language,
+    )
+
+    logger.info(
+        "Run finished (user=%s, status=%s, passed=%d/%d)",
+        user.username, run_result["status"], run_result["passed_tests"], run_result["total_tests"],
+    )
+
+    sanitized_results = []
+    for tr in run_result["test_results"]:
+        sanitized_results.append({
+            "test_number": tr["test_number"],
+            "input": tr["input"],
+            "expected": tr["expected"],
+            "actual": tr["actual"] or "(no output)",
+            "passed": tr["passed"],
+            "error": tr.get("error"),
+        })
+
+    return {
+        "status": run_result["status"],
+        "passed_tests": run_result["passed_tests"],
+        "total_tests": run_result["total_tests"],
+        "score": run_result["score"],
+        "execution_time": run_result["execution_time_ms"],
+        "error_message": run_result["error_message"],
+        "test_results": sanitized_results,
+    }
+
+
 # ─── POST /api/submissions ───────────────────────────────────────────────────
 
 @router.post("", response_model=SubmissionOut, summary="Submit Code")

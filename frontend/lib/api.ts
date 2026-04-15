@@ -143,6 +143,33 @@ export async function submitCode(
     });
 }
 
+/** Run result — lightweight, no DB record */
+export interface RunResult {
+    status: string;
+    passed_tests: number;
+    total_tests: number;
+    score: number;
+    execution_time: number | null;
+    error_message: string | null;
+    test_results: TestCaseResult[] | null;
+}
+
+/** Run code against test cases WITHOUT creating a submission */
+export async function runCode(
+    problemId: number,
+    code: string,
+    language: string = "python"
+): Promise<RunResult> {
+    return apiFetch("/api/submissions/run", {
+        method: "POST",
+        body: JSON.stringify({
+            problem_id: problemId,
+            code,
+            language,
+        }),
+    });
+}
+
 /** Fetch user-specific stats */
 export async function fetchUserStats(): Promise<{
     total_solved: number;

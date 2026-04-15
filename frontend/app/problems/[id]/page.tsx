@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import CodeEditor from "@/components/editor/CodeEditor";
-import { fetchProblem, submitCode, ProblemDetail, SubmissionResult, bookmarkApi } from "@/lib/api";
+import { fetchProblem, submitCode, runCode, ProblemDetail, SubmissionResult, RunResult, bookmarkApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { getLogger } from "@/lib/logger";
@@ -25,6 +25,7 @@ export default function ProblemSolvePage() {
     const [problem, setProblem] = useState<ProblemDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [running, setRunning] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { dbUser } = useAuth();
     const [isBookmarked, setIsBookmarked] = useState<boolean>(false);
@@ -33,6 +34,7 @@ export default function ProblemSolvePage() {
     const [language, setLanguage] = useState<"python">("python");
     const [code, setCode] = useState("");
     const [result, setResult] = useState<SubmissionResult | null>(null);
+    const [runResult, setRunResult] = useState<RunResult | null>(null);
     const [activeTab, setActiveTab] = useState<"console" | "tests" | "feedback" | "visualizer">("console");
 
     useEffect(() => {
@@ -59,10 +61,32 @@ export default function ProblemSolvePage() {
         load();
     }, [slug]);
 
+    const handleRun = async () => {
+        if (!problem) return;
+        setRunning(true);
+        setError(null);
+        setRunResult(null);
+        try {
+            logger.info("Running code", { problemId: problem.id, language });
+            const res = await runCode(problem.id, code, language);
+            logger.info("Run result", { status: res.status, passed: res.passed_tests, total: res.total_tests });
+            setRunResult(res);
+            setResult(null);
+            setActiveTab("tests");
+        } catch (err: any) {
+            logger.error("Run failed", { error: err.message });
+            setError(err.message || "Run failed");
+            setActiveTab("console");
+        } finally {
+            setRunning(false);
+        }
+    };
+
     const handleSubmit = async () => {
         if (!problem) return;
         setSubmitting(true);
         setError(null);
+        setRunResult(null);
         try {
             logger.info("Submitting code", { problemId: problem.id, language });
             const res = await submitCode(problem.id, code, language);
@@ -81,6 +105,7 @@ export default function ProblemSolvePage() {
     const handleReset = () => {
         if (problem?.starter_code?.[language]) setCode(problem.starter_code[language]);
         setResult(null);
+        setRunResult(null);
         setError(null);
         setActiveTab("console");
     };
@@ -253,13 +278,32 @@ export default function ProblemSolvePage() {
                                     Reset
                                 </button>
                             </div>
-                            <button
-                                onClick={handleSubmit}
-                                disabled={submitting}
-                                className="bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-xs font-bold px-6 py-2 rounded-md shadow-md hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
-                            >
-                                {submitting ? "Submitting..." : "Submit Code"}
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleRun}
+                                    disabled={running || submitting}
+                                    className="bg-neutral-700 dark:bg-neutral-700 text-white text-xs font-bold px-5 py-2 rounded-md shadow-md hover:bg-neutral-600 dark:hover:bg-neutral-600 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest flex items-center gap-1.5"
+                                >
+                                    {running ? (
+                                        <>
+                                            <span className="w-3 h-3 border-2 border-neutral-400 border-t-white rounded-full animate-spin"></span>
+                                            Running...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                            Run
+                                        </>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={submitting || running}
+                                    className="bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-xs font-bold px-6 py-2 rounded-md shadow-md hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
+                                >
+                                    {submitting ? "Submitting..." : "Submit Code"}
+                                </button>
+                            </div>
                         </div>
 
                         <Group orientation="vertical" className="flex-1">
@@ -301,34 +345,45 @@ export default function ProblemSolvePage() {
                                     <div className="text-neutral-400">
                                         {error ? (
                                             <p className="text-red-400 whitespace-pre-line">{error}</p>
-                                        ) : result && result.error_message ? (
+                                        ) : (result?.error_message || runResult?.error_message) ? (
                                             <div>
                                                 <p className="text-red-400 mb-2">Runtime Error:</p>
-                                                <p className="text-red-500 whitespace-pre-line bg-red-950/30 p-3 rounded">{result.error_message}</p>
+                                                <p className="text-red-500 whitespace-pre-line bg-red-950/30 p-3 rounded">{result?.error_message || runResult?.error_message}</p>
                                             </div>
-                                        ) : result ? (
+                                        ) : (result || runResult) ? (
                                             <p className="text-green-500">Execution successful! Check 'Test Cases' tab for test results.</p>
                                         ) : (
                                             <>
                                                 <p className="mb-1">Console ready.</p>
-                                                <p>{">"} Submit your code to see results.</p>
+                                                <p>{">"}  Run or submit your code to see results.</p>
                                             </>
                                         )}
                                     </div>
                                 )}
 
                                 {/* Test Results */}
-                                {activeTab === "tests" && result && (
+                                {activeTab === "tests" && (result || runResult) && (() => {
+                                    const activeResult = result || runResult;
+                                    if (!activeResult) return null;
+                                    const isRun = !result && !!runResult;
+                                    return (
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
-                                            <span className={`font-bold text-xs uppercase tracking-widest ${result.status === "passed" || result.status === "accepted" ? "text-green-500" : "text-red-500"}`}>
-                                                {result.status.replace("_", " ")}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`font-bold text-xs uppercase tracking-widest ${activeResult.status === "passed" || activeResult.status === "accepted" ? "text-green-500" : "text-red-500"}`}>
+                                                    {activeResult.status.replace("_", " ")}
+                                                </span>
+                                                {isRun && (
+                                                    <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-400 border border-neutral-700">
+                                                        Run only
+                                                    </span>
+                                                )}
+                                            </div>
                                             <span className="text-neutral-500 dark:text-neutral-400 text-xs">
-                                                Tests: <span className="text-neutral-900 dark:text-white ml-1 font-bold">{result.passed_tests}/{result.total_tests}</span>
+                                                Tests: <span className="text-neutral-900 dark:text-white ml-1 font-bold">{activeResult.passed_tests}/{activeResult.total_tests}</span>
                                             </span>
                                         </div>
-                                        {result.test_results?.map((test, idx) => (
+                                        {activeResult.test_results?.map((test, idx) => (
                                             <div key={idx} className={`p-3 rounded-lg border text-xs ${test.passed ? "bg-green-950/20 border-green-900/50" : "bg-red-950/20 border-red-900/50"}`}>
                                                 <div className="flex justify-between items-center mb-2">
                                                     <span className="text-neutral-600 dark:text-neutral-300 font-medium">Test {test.test_number || idx + 1}</span>
@@ -345,7 +400,8 @@ export default function ProblemSolvePage() {
                                             </div>
                                         ))}
                                     </div>
-                                )}
+                                    );
+                                })()}
 
                                 {/* AI Feedback */}
                                 {activeTab === "feedback" && result && (
@@ -402,8 +458,8 @@ export default function ProblemSolvePage() {
                                 )}
 
                                 {/* Empty states */}
-                                {activeTab === "tests" && !result && (
-                                    <p className="text-neutral-500">{">"} Submit your code to see test results.</p>
+                                {activeTab === "tests" && !result && !runResult && (
+                                    <p className="text-neutral-500">{">"} Run or submit your code to see test results.</p>
                                 )}
                                 {activeTab === "feedback" && !result && (
                                     <p className="text-neutral-500">{">"} Submit your code to receive AI feedback.</p>
